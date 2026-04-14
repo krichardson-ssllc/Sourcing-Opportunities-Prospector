@@ -18,7 +18,6 @@ export type RawSignal = {
   hqState?: string;
   sizeBand?: string;
 };
-};
 
 type ClassifiedSignal = {
   likelyTrigger: string;
@@ -119,7 +118,6 @@ const RULES: Array<{
 
 export function classifySignal(signal: RawSignal): ClassifiedSignal {
   const originalText = `${cleanText(signal.sourceTitle)} ${cleanText(signal.rawText)} ${cleanText(signal.rawSummary ?? "")}`;
-  const haystack = normalizeText(originalText);
 
   for (const rule of RULES) {
     const matches = rule.patterns
