@@ -10,6 +10,7 @@ type Counts = {
 
 export default function HomePage() {
   const [geography, setGeography] = useState("");
+  const [radiusMiles, setRadiusMiles] = useState("50");
   const [results, setResults] = useState<OpportunityRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +25,10 @@ export default function HomePage() {
       const response = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ geography }),
+        body: JSON.stringify({
+          geography,
+          radiusMiles: Number(radiusMiles) || undefined,
+        }),
       });
 
       const payload = await response.json();
@@ -47,20 +51,26 @@ export default function HomePage() {
   }
 
   return (
-    <main style={{ maxWidth: 1750, margin: "0 auto", padding: 24, fontFamily: "Arial, Helvetica, sans-serif" }}>
+    <main style={{ maxWidth: 1900, margin: "0 auto", padding: 24, fontFamily: "Arial, Helvetica, sans-serif" }}>
       <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 24 }}>
         <h1 style={{ fontSize: 32, marginTop: 0, marginBottom: 8 }}>
           Surplus Solutions Sourcing Opportunity Tool
         </h1>
         <p style={{ color: "#6b7280", marginTop: 0 }}>
-          Enter a geography and return interpreted sourcing signals based on WARN notices and public news / press release style signals tied to funding pressure, downsizing, lab closures, facility closures, and research shifts.
+          Enter a geography and optionally a miles radius to return interpreted sourcing signals based on WARN notices and public news / press release style signals.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 140px auto", gap: 12 }}>
           <input
             value={geography}
             onChange={(e) => setGeography(e.target.value)}
             placeholder="Boston, Massachusetts, California, San Diego"
+            style={{ padding: 12, border: "1px solid #d1d5db", borderRadius: 10, fontSize: 16 }}
+          />
+          <input
+            value={radiusMiles}
+            onChange={(e) => setRadiusMiles(e.target.value)}
+            placeholder="Miles"
             style={{ padding: 12, border: "1px solid #d1d5db", borderRadius: 10, fontSize: 16 }}
           />
           <button
@@ -115,7 +125,7 @@ export default function HomePage() {
       <section style={{ marginTop: 20 }}>
         <h2 style={{ marginBottom: 6 }}>Results</h2>
         <p style={{ marginTop: 0, color: "#6b7280", fontSize: 14 }}>
-          Output is structured on the original spreadsheet columns, with separate Company Name, Website, and Headline fields.
+          Output now keeps Company Name separate from Headline and supports optional miles-radius filtering.
         </p>
 
         {error ? (
@@ -123,7 +133,7 @@ export default function HomePage() {
         ) : null}
 
         <div style={{ overflowX: "auto", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1900 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 2100 }}>
             <thead>
               <tr style={{ background: "#f9fafb", textAlign: "left" }}>
                 {[
@@ -134,6 +144,7 @@ export default function HomePage() {
                   "HQ State",
                   "Region",
                   "Country",
+                  "Distance (Miles)",
                   "Science Focus / Domain",
                   "Approx. Size Band (Employees)",
                   "Likely Trigger",
@@ -152,7 +163,7 @@ export default function HomePage() {
             <tbody>
               {results.length === 0 ? (
                 <tr>
-                  <td colSpan={15} style={{ padding: 18, color: "#6b7280" }}>
+                  <td colSpan={16} style={{ padding: 18, color: "#6b7280" }}>
                     No results returned for this geography.
                   </td>
                 </tr>
@@ -160,14 +171,15 @@ export default function HomePage() {
                 results.map((row) => (
                   <tr key={row.id}>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.companyName}</td>
-                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>
-                      {row.website ? row.website : ""}
-                    </td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.website}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6", maxWidth: 360 }}>{row.headline}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.hqCity}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.hqState}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.region}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.country}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>
+                      {typeof row.distanceMiles === "number" ? row.distanceMiles : ""}
+                    </td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.scienceFocus}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.sizeBand}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.likelyTrigger}</td>

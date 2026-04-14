@@ -1,5 +1,5 @@
 import { OpportunityLikelihood } from "@/types/opportunity";
-import { cleanText, normalizeText } from "./utils";
+import { cleanText } from "./utils";
 
 export type RawSignal = {
   companyName: string;

@@ -6,6 +6,7 @@ import { inferEquipmentTypes } from "@/lib/server/equipment-mapping";
 import { buildCitation, classifySignal, RawSignal } from "@/lib/server/trigger-taxonomy";
 import { searchWarnSignals } from "@/lib/server/sources/warn";
 import { searchPublicNewsSignals } from "@/lib/server/sources/public-news";
+import { geocodePlace, haversineMiles } from "@/lib/server/geocode";
 
 const schema = z.object({
   geography: z.string().min(2),
@@ -58,25 +59,6 @@ function geographyMatchesRow(row: OpportunityRow, geography: string): boolean {
       .join(" ")
   );
 
-  const broadGeos = new Set([
-    "massachusetts",
-    "california",
-    "maryland",
-    "pennsylvania",
-    "france",
-    "germany",
-    "belgium",
-    "uk",
-    "united kingdom",
-    "united states",
-    "us",
-    "colorado",
-  ]);
-
-  if (broadGeos.has(geo)) {
-    return haystack.includes(geo);
-  }
-
   const escaped = geo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`\\b${escaped}\\b`, "i").test(haystack);
 }
@@ -89,7 +71,7 @@ function isBadHeadlineAsCompany(row: OpportunityRow): boolean {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { geography } = schema.parse(body);
+    const { geography, radiusMiles } = schema.parse(body);
 
     const [warnSignals, newsSignals] = await Promise.all([
       searchWarnSignals(geography),
@@ -102,23 +84,60 @@ export async function POST(req: NextRequest) {
         `${item.companyName}|${item.sourceTitle}|${item.sourceUrl}|${item.sourceDate || ""}|${item.region}`
     );
 
-    const rows = allSignals
+    let rows = allSignals
       .map(toOpportunityRow)
       .filter((row) => geographyMatchesRow(row, geography))
       .map((row) =>
         isBadHeadlineAsCompany(row)
           ? { ...row, companyName: "" }
           : row
-      )
-      .sort((a, b) => {
-        const byScore =
-          scoreWeight(b.sourcingLikelihood) - scoreWeight(a.sourcingLikelihood);
-        if (byScore !== 0) return byScore;
-        return (b.sourceDate || "").localeCompare(a.sourceDate || "");
-      });
+      );
+
+    if (radiusMiles && radiusMiles > 0) {
+      const center = await geocodePlace(geography);
+
+      if (center) {
+        const rowsWithDistance: OpportunityRow[] = [];
+
+        for (const row of rows) {
+          const loc =
+            [row.hqCity, row.hqState, row.country].filter(Boolean).join(", ") ||
+            [row.region, row.country].filter(Boolean).join(", ");
+
+          const point = await geocodePlace(loc);
+          if (!point) continue;
+
+          const miles = haversineMiles(center.lat, center.lon, point.lat, point.lon);
+
+          if (miles <= radiusMiles) {
+            rowsWithDistance.push({
+              ...row,
+              latitude: point.lat,
+              longitude: point.lon,
+              distanceMiles: Math.round(miles * 10) / 10,
+            });
+          }
+        }
+
+        rows = rowsWithDistance;
+      }
+    }
+
+    rows = rows.sort((a, b) => {
+      const byScore =
+        scoreWeight(b.sourcingLikelihood) - scoreWeight(a.sourcingLikelihood);
+      if (byScore !== 0) return byScore;
+
+      if (typeof a.distanceMiles === "number" && typeof b.distanceMiles === "number") {
+        return a.distanceMiles - b.distanceMiles;
+      }
+
+      return (b.sourceDate || "").localeCompare(a.sourceDate || "");
+    });
 
     return NextResponse.json({
       geography,
+      radiusMiles: radiusMiles || null,
       count: rows.length,
       results: rows,
       sourceCounts: {

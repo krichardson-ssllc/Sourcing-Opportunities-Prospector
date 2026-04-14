@@ -20,4 +20,7 @@ export type OpportunityRow = {
   sourceType: string;
   sourceUrl: string;
   sourceDate?: string;
+  latitude?: number;
+  longitude?: number;
+  distanceMiles?: number;
 };
