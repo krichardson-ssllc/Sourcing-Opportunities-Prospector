@@ -59,6 +59,28 @@ function geographyMatchesRow(row: OpportunityRow, geography: string): boolean {
       .join(" ")
   );
 
+  const broadGeos = new Set([
+    "massachusetts",
+    "california",
+    "maryland",
+    "pennsylvania",
+    "france",
+    "germany",
+    "belgium",
+    "uk",
+    "united kingdom",
+    "united states",
+    "us",
+    "colorado",
+    "texas",
+    "florida",
+    "new york",
+  ]);
+
+  if (broadGeos.has(geo)) {
+    return true;
+  }
+
   const escaped = geo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`\\b${escaped}\\b`, "i").test(haystack);
 }
@@ -66,6 +88,41 @@ function geographyMatchesRow(row: OpportunityRow, geography: string): boolean {
 function isBadHeadlineAsCompany(row: OpportunityRow): boolean {
   if (!row.companyName) return false;
   return normalizeText(row.companyName) === normalizeText(row.headline);
+}
+
+async function applyRadius(
+  rows: OpportunityRow[],
+  geography: string,
+  radiusMiles?: number
+): Promise<OpportunityRow[]> {
+  if (!radiusMiles || radiusMiles <= 0) return rows;
+
+  const center = await geocodePlace(geography);
+  if (!center) return rows;
+
+  const rowsWithDistance: OpportunityRow[] = [];
+
+  for (const row of rows) {
+    const loc =
+      [row.hqCity, row.hqState, row.country].filter(Boolean).join(", ") ||
+      [row.region, row.country].filter(Boolean).join(", ");
+
+    const point = await geocodePlace(loc);
+    if (!point) continue;
+
+    const miles = haversineMiles(center.lat, center.lon, point.lat, point.lon);
+
+    if (miles <= radiusMiles) {
+      rowsWithDistance.push({
+        ...row,
+        latitude: point.lat,
+        longitude: point.lon,
+        distanceMiles: Math.round(miles * 10) / 10,
+      });
+    }
+  }
+
+  return rowsWithDistance;
 }
 
 export async function POST(req: NextRequest) {
@@ -93,34 +150,9 @@ export async function POST(req: NextRequest) {
           : row
       );
 
-    if (radiusMiles && radiusMiles > 0) {
-      const center = await geocodePlace(geography);
-
-      if (center) {
-        const rowsWithDistance: OpportunityRow[] = [];
-
-        for (const row of rows) {
-          const loc =
-            [row.hqCity, row.hqState, row.country].filter(Boolean).join(", ") ||
-            [row.region, row.country].filter(Boolean).join(", ");
-
-          const point = await geocodePlace(loc);
-          if (!point) continue;
-
-          const miles = haversineMiles(center.lat, center.lon, point.lat, point.lon);
-
-          if (miles <= radiusMiles) {
-            rowsWithDistance.push({
-              ...row,
-              latitude: point.lat,
-              longitude: point.lon,
-              distanceMiles: Math.round(miles * 10) / 10,
-            });
-          }
-        }
-
-        rows = rowsWithDistance;
-      }
+    const radiusRows = await applyRadius(rows, geography, radiusMiles);
+    if (radiusRows.length > 0) {
+      rows = radiusRows;
     }
 
     rows = rows.sort((a, b) => {
