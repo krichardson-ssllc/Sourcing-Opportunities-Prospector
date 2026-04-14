@@ -12,6 +12,7 @@ export type OpportunityRow = {
   website: string;
   likelyTrigger: string;
   sourcingLikelihood: OpportunityLikelihood;
+  likelyEquipmentTypes: string;
   notes: string;
   informationSourceCitations: string;
   sourceType: string;

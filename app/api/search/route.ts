@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { OpportunityRow } from "@/types/opportunity";
 import { dedupeBy, scoreWeight, normalizeText } from "@/lib/server/utils";
-import {
-  buildCitation,
-  classifySignal,
-  RawSignal,
-} from "@/lib/server/trigger-taxonomy";
+import { inferEquipmentTypes } from "@/lib/server/equipment-mapping";
+import { buildCitation, classifySignal, RawSignal } from "@/lib/server/trigger-taxonomy";
 import { searchWarnSignals } from "@/lib/server/sources/warn";
-import { searchClinicalTrialSignals } from "@/lib/server/sources/clinicaltrials";
+import { searchPublicNewsSignals } from "@/lib/server/sources/public-news";
 
 const schema = z.object({
   geography: z.string().min(2),
@@ -29,6 +26,7 @@ function toOpportunityRow(signal: RawSignal): OpportunityRow {
     website: signal.website || "",
     likelyTrigger: classified.likelyTrigger,
     sourcingLikelihood: classified.sourcingLikelihood,
+    likelyEquipmentTypes: inferEquipmentTypes(signal.scienceFocus || "", classified.likelyTrigger),
     notes: classified.notes,
     informationSourceCitations: buildCitation(signal),
     sourceType: signal.sourceType,
@@ -82,13 +80,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { geography } = schema.parse(body);
 
-    const [warnSignals, trialSignals] = await Promise.all([
+    const [warnSignals, newsSignals] = await Promise.all([
       searchWarnSignals(geography),
-      searchClinicalTrialSignals(geography),
+      searchPublicNewsSignals(geography),
     ]);
 
     const allSignals = dedupeBy(
-      [...warnSignals, ...trialSignals],
+      [...warnSignals, ...newsSignals],
       (item) =>
         `${item.companyName}|${item.sourceTitle}|${item.sourceUrl}|${item.sourceDate || ""}|${item.region}`
     );
@@ -109,17 +107,7 @@ export async function POST(req: NextRequest) {
       results: rows,
       sourceCounts: {
         warn: warnSignals.length,
-        clinicalTrials: trialSignals.length,
-      },
-      filteredSourceCounts: {
-        warn: rows.filter(
-          (r) =>
-            r.sourceType === "Massachusetts WARN" ||
-            r.sourceType === "California WARN"
-        ).length,
-        clinicalTrials: rows.filter(
-          (r) => r.sourceType === "ClinicalTrials.gov"
-        ).length,
+        publicNews: newsSignals.length,
       },
       triggerCounts: rows.reduce<Record<string, number>>((acc, row) => {
         acc[row.likelyTrigger] = (acc[row.likelyTrigger] || 0) + 1;

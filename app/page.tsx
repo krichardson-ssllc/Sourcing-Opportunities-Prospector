@@ -5,7 +5,7 @@ import { OpportunityRow } from "@/types/opportunity";
 
 type Counts = {
   warn: number;
-  clinicalTrials: number;
+  publicNews: number;
 };
 
 export default function HomePage() {
@@ -47,20 +47,20 @@ export default function HomePage() {
   }
 
   return (
-    <main style={{ maxWidth: 1240, margin: "0 auto", padding: 24, fontFamily: "Arial, Helvetica, sans-serif" }}>
+    <main style={{ maxWidth: 1400, margin: "0 auto", padding: 24, fontFamily: "Arial, Helvetica, sans-serif" }}>
       <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 24 }}>
         <h1 style={{ fontSize: 32, marginTop: 0, marginBottom: 8 }}>
           Surplus Solutions Sourcing Opportunity Tool
         </h1>
         <p style={{ color: "#6b7280", marginTop: 0 }}>
-          Enter a geography and return interpreted sourcing triggers like facility closures, research shifts, program discontinuations, and WARN-linked site changes.
+          Enter a geography and return interpreted sourcing signals based on WARN notices and public news / press release style signals tied to funding pressure, downsizing, lab closures, facility closures, and research shifts.
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12 }}>
           <input
             value={geography}
             onChange={(e) => setGeography(e.target.value)}
-            placeholder="Massachusetts, California, Boston, San Diego"
+            placeholder="Boston, Massachusetts, California, San Diego"
             style={{ padding: 12, border: "1px solid #d1d5db", borderRadius: 10, fontSize: 16 }}
           />
           <button
@@ -81,7 +81,7 @@ export default function HomePage() {
         </div>
 
         <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>
-          Sources currently wired: Massachusetts WARN, California WARN, ClinicalTrials.gov
+          Sources currently wired: Massachusetts WARN, California WARN, public news / press release style signals
         </div>
       </section>
 
@@ -91,7 +91,7 @@ export default function HomePage() {
             <h2 style={{ marginTop: 0, fontSize: 18 }}>Source counts</h2>
             <div style={{ color: "#374151", lineHeight: 1.8 }}>
               WARN: {sourceCounts?.warn ?? 0}<br />
-              ClinicalTrials.gov: {sourceCounts?.clinicalTrials ?? 0}
+              Public news: {sourceCounts?.publicNews ?? 0}
             </div>
           </div>
 
@@ -115,7 +115,7 @@ export default function HomePage() {
       <section style={{ marginTop: 20 }}>
         <h2 style={{ marginBottom: 6 }}>Results</h2>
         <p style={{ marginTop: 0, color: "#6b7280", fontSize: 14 }}>
-          Output is structured to match the original spreadsheet logic: likely trigger, sourcing likelihood, notes, and source citations.
+          Output is structured on the original spreadsheet columns, with an added Likely Equipment Types column inferred from science focus and trigger.
         </p>
 
         {error ? (
@@ -123,7 +123,7 @@ export default function HomePage() {
         ) : null}
 
         <div style={{ overflowX: "auto", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1200 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1500 }}>
             <thead>
               <tr style={{ background: "#f9fafb", textAlign: "left" }}>
                 {[
@@ -137,6 +137,7 @@ export default function HomePage() {
                   "Website",
                   "Likely Trigger",
                   "Sourcing Likelihood",
+                  "Likely Equipment Types",
                   "Notes",
                   "Information Source Citations",
                 ].map((header) => (
@@ -149,7 +150,7 @@ export default function HomePage() {
             <tbody>
               {results.length === 0 ? (
                 <tr>
-                  <td colSpan={12} style={{ padding: 18, color: "#6b7280" }}>
+                  <td colSpan={13} style={{ padding: 18, color: "#6b7280" }}>
                     No results returned for this geography.
                   </td>
                 </tr>
@@ -170,6 +171,7 @@ export default function HomePage() {
                     </td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.likelyTrigger}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.sourcingLikelihood}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6", maxWidth: 360 }}>{row.likelyEquipmentTypes}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6", maxWidth: 360 }}>{row.notes}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6", maxWidth: 420 }}>
                       {row.sourceUrl ? (

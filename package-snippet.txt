@@ -2,6 +2,7 @@ Add these dependencies to package.json if they are not already present:
 
 {
   "dependencies": {
+    "fast-xml-parser": "^4.5.1",
     "xlsx": "^0.18.5",
     "zod": "^3.24.1"
   }

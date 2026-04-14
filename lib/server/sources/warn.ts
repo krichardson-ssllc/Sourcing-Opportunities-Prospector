@@ -7,12 +7,33 @@ type WarnRow = Record<string, unknown>;
 function matchesGeography(text: string, geography: string): boolean {
   const haystack = normalizeText(text);
   const needle = normalizeText(geography);
-  return needle ? haystack.includes(needle) : true;
+
+  if (!needle) return true;
+
+  const broadRegions = [
+    "massachusetts",
+    "california",
+    "maryland",
+    "pennsylvania",
+    "france",
+    "germany",
+    "belgium",
+    "uk",
+    "united kingdom",
+    "us",
+    "united states",
+  ];
+
+  if (broadRegions.includes(needle)) {
+    return haystack.includes(needle);
+  }
+
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}\\b`, "i").test(text);
 }
 
 function parseWorkers(value: unknown): string {
-  const cleaned = String(value ?? "").trim();
-  return cleaned;
+  return String(value ?? "").trim();
 }
 
 async function fetchCsvRows(url: string): Promise<WarnRow[]> {
@@ -59,7 +80,7 @@ function mapMassachusetts(rows: WarnRow[], geography: string, url: string): RawS
       rawSummary: notes || "Massachusetts WARN notice match",
       hqCity: city,
       hqState: "MA",
-      scienceFocus: "Operations / site footprint",
+      scienceFocus: "Biotech / pharma operations",
       website: "",
       sizeBand: "",
     });
@@ -95,7 +116,7 @@ function mapCalifornia(rows: WarnRow[], geography: string, url: string): RawSign
       rawSummary: noticeType || "California WARN notice match",
       hqCity: city,
       hqState: "CA",
-      scienceFocus: "Operations / site footprint",
+      scienceFocus: "Biotech / pharma operations",
       website: "",
       sizeBand: "",
     });

@@ -33,32 +33,38 @@ const RULES: Array<{
   {
     trigger: "Site wind-down & WARN notices",
     likelihood: "High",
-    patterns: [/warn/i, /mass layoff/i, /layoff/i, /workers affected/i],
-    note: "Public WARN or layoff signal suggests a facility-level change that may create near-term equipment disposition opportunities.",
+    patterns: [/warn/i, /mass layoff/i, /layoff/i, /workers affected/i, /workforce reduction/i],
+    note: "Public WARN or layoff language suggests an operating footprint reduction that can create near-term sourcing opportunities.",
   },
   {
-    trigger: "Facility closure / site shutdown",
+    trigger: "Plant closures & headcount reductions",
     likelihood: "High",
-    patterns: [/facility closure/i, /site closure/i, /shutdown/i, /plant closing/i, /close .* facility/i],
-    note: "Public closure or shutdown language suggests direct surplus-equipment potential tied to site contraction or exit.",
+    patterns: [/facility closure/i, /site closure/i, /shutdown/i, /close .* facility/i, /headcount reduction/i, /plant closing/i],
+    note: "Public closure or shutdown language suggests direct equipment disposition potential tied to a physical site change.",
   },
   {
-    trigger: "Research shift / program discontinuation",
+    trigger: "Pipeline reprioritization risk",
     likelihood: "Medium",
-    patterns: [/terminated/i, /suspended/i, /withdrawn/i, /why stopped/i, /program discontinuation/i, /repriorit/i],
-    note: "Program disruption or trial status change may indicate a research shift, reduced lab demand, or redeployment of non-core assets.",
+    patterns: [/pipeline/i, /program cut/i, /program discontinuation/i, /repriorit/i, /terminated program/i],
+    note: "Pipeline or program changes can reduce demand for specialized R&D equipment and increase surplus risk.",
   },
   {
     trigger: "Portfolio narrowing / spend control",
     likelihood: "Medium",
-    patterns: [/cost reduction/i, /restructuring/i, /consolidation/i, /cash preservation/i, /operational efficiency/i],
-    note: "Restructuring or spend-control language can point to a tighter operating footprint and selective asset liquidation opportunities.",
+    patterns: [/restructuring/i, /cost reduction/i, /consolidation/i, /cash preservation/i, /expense reduction/i, /spend control/i],
+    note: "Restructuring or spend-control language can point to a tighter operating footprint and selective asset liquidation.",
   },
   {
-    trigger: "Regulatory / recall pressure",
+    trigger: "Funding pressure / capital discipline",
+    likelihood: "Medium",
+    patterns: [/financing/i, /cash runway/i, /going concern/i, /capital discipline/i, /funding/i, /liquidity/i],
+    note: "Funding pressure or capital-discipline language may indicate a need to shrink lab footprint, defer expansion, or dispose of non-core assets.",
+  },
+  {
+    trigger: "Strategic uncertainty / legal overhang",
     likelihood: "Low",
-    patterns: [/recall/i, /enforcement/i, /warning letter/i],
-    note: "Regulatory pressure is a weaker sourcing signal on its own, but may contribute to future operational change.",
+    patterns: [/strategic alternatives/i, /review of options/i, /legal/i, /litigation/i, /overhang/i],
+    note: "Strategic or legal uncertainty is a weaker sourcing signal alone, but can precede operational changes.",
   },
 ];
 
@@ -78,7 +84,7 @@ export function classifySignal(signal: RawSignal): ClassifiedSignal {
   return {
     likelyTrigger: "General public-source operating signal",
     sourcingLikelihood: "Low",
-    notes: "Public-source signal was detected, but it does not yet map cleanly to a stronger sourcing trigger.",
+    notes: "A public signal was detected, but it does not yet map cleanly to a stronger sourcing trigger.",
   };
 }
 
