@@ -1,76 +1,110 @@
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { OpportunityRow } from "@/types/opportunity";
-import { dedupeBy, scoreWeight } from "@/lib/server/utils";
-import { buildCitation, classifySignal, RawSignal } from "@/lib/server/trigger-taxonomy";
-import { searchWarnSignals } from "@/lib/server/sources/warn";
-import { searchClinicalTrialSignals } from "@/lib/server/sources/clinicaltrials";
+import { cleanText, inferCountry, normalizeText } from "../utils";
+import { RawSignal } from "../trigger-taxonomy";
 
-const schema = z.object({
-  geography: z.string().min(2),
-});
+function locationMatchesGeography(
+  geography: string,
+  city?: string,
+  state?: string,
+  country?: string,
+  facility?: string
+): boolean {
+  const g = normalizeText(geography);
+  const haystack = normalizeText(
+    [city, state, country, facility].filter(Boolean).join(" ")
+  );
 
-function toOpportunityRow(signal: RawSignal): OpportunityRow {
-  const classified = classifySignal(signal);
-
-  return {
-    id: crypto.randomUUID(),
-    companyName: signal.companyName || "Unknown company",
-    hqCity: signal.hqCity || "",
-    hqState: signal.hqState || "",
-    region: signal.region,
-    country: signal.country,
-    scienceFocus: signal.scienceFocus || "",
-    sizeBand: signal.sizeBand || "",
-    website: signal.website || "",
-    likelyTrigger: classified.likelyTrigger,
-    sourcingLikelihood: classified.sourcingLikelihood,
-    notes: classified.notes,
-    informationSourceCitations: buildCitation(signal),
-    sourceType: signal.sourceType,
-    sourceUrl: signal.sourceUrl,
-    sourceDate: signal.sourceDate,
-  };
+  return g ? haystack.includes(g) : false;
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { geography } = schema.parse(body);
+export async function searchClinicalTrialSignals(
+  geography: string
+): Promise<RawSignal[]> {
+  const statuses = ["TERMINATED", "WITHDRAWN", "SUSPENDED"];
+  const out: RawSignal[] = [];
 
-    const [warnSignals, trialSignals] = await Promise.all([
-      searchWarnSignals(geography),
-      searchClinicalTrialSignals(geography),
-    ]);
+  for (const status of statuses) {
+    const url =
+      `https://clinicaltrials.gov/api/v2/studies` +
+      `?query.term=${encodeURIComponent(geography)}` +
+      `&filter.overallStatus=${encodeURIComponent(status)}` +
+      `&pageSize=50` +
+      `&format=json`;
 
-    const allSignals = dedupeBy(
-      [...warnSignals, ...trialSignals],
-      (item) => `${item.companyName}|${item.sourceTitle}|${item.sourceUrl}|${item.sourceDate || ""}`
-    );
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) continue;
 
-    const rows = allSignals
-      .map(toOpportunityRow)
-      .sort((a, b) => {
-        const byScore = scoreWeight(b.sourcingLikelihood) - scoreWeight(a.sourcingLikelihood);
-        if (byScore !== 0) return byScore;
-        return (b.sourceDate || "").localeCompare(a.sourceDate || "");
-      });
+      const json = await res.json();
+      const studies = Array.isArray(json?.studies) ? json.studies : [];
 
-    return NextResponse.json({
-      geography,
-      count: rows.length,
-      results: rows,
-      sourceCounts: {
-        warn: warnSignals.length,
-        clinicalTrials: trialSignals.length,
-      },
-      triggerCounts: rows.reduce<Record<string, number>>((acc, row) => {
-        acc[row.likelyTrigger] = (acc[row.likelyTrigger] || 0) + 1;
-        return acc;
-      }, {}),
-    });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Search failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
+      for (const study of studies) {
+        const protocol = study.protocolSection || {};
+        const identificationModule = protocol.identificationModule || {};
+        const statusModule = protocol.statusModule || {};
+        const sponsorModule = protocol.sponsorCollaboratorsModule || {};
+        const conditionsModule = protocol.conditionsModule || {};
+        const contactsLocationsModule = protocol.contactsLocationsModule || {};
+
+        const companyName = cleanText(
+          sponsorModule.leadSponsor?.name || "Unknown sponsor"
+        );
+        const title = cleanText(
+          identificationModule.briefTitle || identificationModule.officialTitle
+        );
+        const nctId = cleanText(identificationModule.nctId);
+        const whyStopped = cleanText(statusModule.whyStopped);
+        const overallStatus = cleanText(statusModule.overallStatus);
+        const conditions = Array.isArray(conditionsModule.conditions)
+          ? conditionsModule.conditions.join(", ")
+          : "";
+
+        const locations = Array.isArray(contactsLocationsModule.locations)
+          ? contactsLocationsModule.locations
+          : [];
+
+        const matchingLocations = locations.filter((loc: any) =>
+          locationMatchesGeography(
+            geography,
+            cleanText(loc.city),
+            cleanText(loc.state),
+            cleanText(loc.country),
+            cleanText(loc.facility)
+          )
+        );
+
+        if (matchingLocations.length === 0) continue;
+
+        for (const loc of matchingLocations) {
+          const city = cleanText(loc.city);
+          const state = cleanText(loc.state);
+          const country = cleanText(loc.country) || inferCountry(geography);
+          const facility = cleanText(loc.facility);
+          const region = [city, state || country].filter(Boolean).join(", ");
+
+          out.push({
+            companyName,
+            region,
+            country,
+            scienceFocus: conditions || "Clinical development",
+            website: "",
+            sizeBand: "",
+            sourceType: "ClinicalTrials.gov",
+            sourceUrl: nctId
+              ? `https://clinicaltrials.gov/study/${nctId}`
+              : "https://clinicaltrials.gov/",
+            sourceTitle: title || nctId || "Clinical trial status change",
+            sourceDate: cleanText(statusModule.lastUpdatePostDateStruct?.date),
+            rawText: `${overallStatus}${whyStopped ? ` | ${whyStopped}` : ""}`,
+            rawSummary: whyStopped || `Study status: ${overallStatus}`,
+            hqCity: city,
+            hqState: state,
+          });
+        }
+      }
+    } catch {
+      // ignore source failure
+    }
   }
+
+  return out;
 }
