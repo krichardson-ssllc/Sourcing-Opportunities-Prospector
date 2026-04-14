@@ -20,7 +20,7 @@ export default function HomePage() {
       const response = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ geography, radius, category }),
+        body: JSON.stringify({ geography, radius, category })
       });
 
       const payload = await response.json();
@@ -47,32 +47,21 @@ export default function HomePage() {
             Enter a city, state, metro, country, or region to surface live opportunity signals from public biotech and pharma sources.
           </p>
 
-          <div
-            className="grid"
-            style={{ gridTemplateColumns: "1.5fr 0.7fr 0.8fr auto" }}
-          >
+          <div className="grid" style={{ gridTemplateColumns: "1.5fr 0.7fr 0.8fr auto" }}>
             <input
               className="input"
               value={geography}
               onChange={(e) => setGeography(e.target.value)}
               placeholder="Boston, MA · Maryland · France · EMEA"
             />
-            <select
-              className="select"
-              value={radius}
-              onChange={(e) => setRadius(e.target.value)}
-            >
+            <select className="select" value={radius} onChange={(e) => setRadius(e.target.value)}>
               <option value="25">25 miles</option>
               <option value="50">50 miles</option>
               <option value="100">100 miles</option>
               <option value="250">250 miles</option>
               <option value="region">Region-wide</option>
             </select>
-            <select
-              className="select"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
+            <select className="select" value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="all">All categories</option>
               <option value="biotech">Biotech</option>
               <option value="pharma">Pharma</option>
@@ -80,11 +69,7 @@ export default function HomePage() {
               <option value="academic">Academic</option>
               <option value="medical">Medical</option>
             </select>
-            <button
-              className="button"
-              onClick={handleSearch}
-              disabled={!geography.trim() || loading}
-            >
+            <button className="button" onClick={handleSearch} disabled={!geography.trim() || loading}>
               {loading ? "Searching..." : "Search"}
             </button>
           </div>
@@ -113,9 +98,7 @@ export default function HomePage() {
         <div className="row" style={{ justifyContent: "space-between" }}>
           <div>
             <h2 className="section-title">Results</h2>
-            <p className="muted small">
-              Results below should come from live public-source signals, not placeholder data.
-            </p>
+            <p className="muted small">Results below should come from live public-source signals, not placeholder data.</p>
           </div>
         </div>
 
@@ -123,9 +106,7 @@ export default function HomePage() {
 
         <div className="results top-space">
           {results.length === 0 ? (
-            <div className="card card-pad muted">
-              No results yet. Run a search to retrieve live sourcing signals.
-            </div>
+            <div className="card card-pad muted">No results yet. Run a search to retrieve live sourcing signals.</div>
           ) : (
             results.map((item) => <OpportunityCard key={item.id} item={item} />)
           )}
