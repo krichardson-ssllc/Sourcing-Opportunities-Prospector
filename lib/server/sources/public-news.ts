@@ -86,42 +86,38 @@ function looksActionable(title: string, description: string): boolean {
   return POSITIVE_PATTERNS.some((pattern) => pattern.test(combined));
 }
 
-function guessCompanyName(title: string): string {
-  const cleaned = cleanText(title.replace(/\s+-\s+[^-]+$/, ""));
-
-  const badStarts = [
-    "seven biotech companies",
-    "top biotech companies",
-    "biotech companies",
-    "pharma companies",
-    "industry roundup",
-    "companies to watch",
-    "startups to watch"
-  ];
-
-  const lower = cleaned.toLowerCase();
-  if (badStarts.some((s) => lower.startsWith(s))) {
-    return "";
-  }
-
-  const separators = [":", "–", "|"];
-  for (const sep of separators) {
-    const first = cleaned.split(sep)[0]?.trim();
-    if (first && first.split(" ").length <= 8) return first;
-  }
-
-  const hyphenParts = cleaned.split(" - ").map((p) => p.trim()).filter(Boolean);
-  if (hyphenParts.length > 0 && hyphenParts[0].split(" ").length <= 8) {
-    return hyphenParts[0];
-  }
-
-  return cleaned;
-}
-
 function geographyMatches(title: string, description: string, geography: string): boolean {
   const needle = normalizeText(geography);
   const haystack = normalizeText(`${title} ${description}`);
   return needle ? haystack.includes(needle) : true;
+}
+
+function extractCompanyName(title: string, description: string): string {
+  const combined = `${title} ${description}`;
+
+  const companyPatterns = [
+    /^([A-Z][A-Za-z0-9&.\-,' ]{1,80}?)\s+(announces|reports|closes|shuts|cuts|lays off|restructures|explores|faces|files)\b/,
+    /^([A-Z][A-Za-z0-9&.\-,' ]{1,80}?)\s*:\s*/,
+    /^([A-Z][A-Za-z0-9&.\-,' ]{1,80}?)\s*[-–|]\s*/,
+  ];
+
+  for (const pattern of companyPatterns) {
+    const match = combined.match(pattern);
+    if (match?.[1]) {
+      return cleanText(match[1]);
+    }
+  }
+
+  return "";
+}
+
+function extractWebsite(link: string): string {
+  try {
+    const url = new URL(link);
+    return url.hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
 }
 
 export async function searchPublicNewsSignals(geography: string): Promise<RawSignal[]> {
@@ -153,16 +149,16 @@ export async function searchPublicNewsSignals(geography: string): Promise<RawSig
         if (!geographyMatches(title, description, geography)) continue;
         if (!looksActionable(title, description)) continue;
 
-        const companyName = guessCompanyName(title);
+        const companyName = extractCompanyName(title, description);
         if (!companyName) continue;
 
         out.push({
           companyName,
+          website: extractWebsite(link),
+          headline: title,
           region: geography,
           country: inferCountry(geography),
           scienceFocus: "Biotech / pharma operations",
-          website: "",
-          sizeBand: "",
           sourceType: extractPublisher(title),
           sourceUrl: link,
           sourceTitle: title,
@@ -171,6 +167,7 @@ export async function searchPublicNewsSignals(geography: string): Promise<RawSig
           rawSummary: description,
           hqCity: "",
           hqState: "",
+          sizeBand: "",
         });
       }
     } catch {
