@@ -1,46 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMockOpportunities } from "@/lib/mock-data";
+import * as XLSX from "xlsx";
 
-export async function GET(request: NextRequest) {
-  const geography = request.nextUrl.searchParams.get("geography") ?? "Boston";
-  const opportunities = getMockOpportunities(geography);
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const results = Array.isArray(body?.results) ? body.results : [];
 
-  const header = [
-    "company_name",
-    "region",
-    "country",
-    "science_focus",
-    "opportunity_type",
-    "sourcing_likelihood",
-    "trigger",
-    "source_type",
-    "source_title",
-    "source_date",
-    "source_url"
-  ];
+    const rows = results.map((r: any) => ({
+      "Company Name": r.companyName ?? "",
+      "HQ City": r.hqCity ?? "",
+      "HQ State": r.hqState ?? "",
+      "Region": r.region ?? "",
+      "Country": r.country ?? "",
+      "Science Focus / Domain": r.scienceFocus ?? "",
+      "Approx. Size Band (Employees)": r.sizeBand ?? "",
+      Website: r.website ?? "",
+      "Likely Trigger": r.likelyTrigger ?? "",
+      "Sourcing Likelihood": r.sourcingLikelihood ?? "",
+      Notes: r.notes ?? "",
+      "Information Source Citations": r.informationSourceCitations ?? "",
+      "Source Type": r.sourceType ?? "",
+      "Source URL": r.sourceUrl ?? "",
+      "Source Date": r.sourceDate ?? "",
+    }));
 
-  const rows = opportunities.map((item) => [
-    item.companyName,
-    item.region,
-    item.country,
-    item.scienceFocus,
-    item.opportunityType,
-    item.sourcingLikelihood,
-    item.trigger,
-    item.sourceType,
-    item.sourceTitle,
-    item.sourceDate,
-    item.sourceUrl
-  ]);
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Opportunities");
 
-  const csv = [header, ...rows]
-    .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
+    const buffer = XLSX.write(workbook, {
+      type: "buffer",
+      bookType: "xlsx",
+    });
 
-  return new NextResponse(csv, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="opportunities-${geography}.csv"`
-    }
-  });
+    return new NextResponse(buffer, {
+      status: 200,
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition":
+          'attachment; filename="sourcing-opportunities.xlsx"',
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Export failed." },
+      { status: 500 }
+    );
+  }
 }
