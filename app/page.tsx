@@ -47,7 +47,7 @@ export default function HomePage() {
   }
 
   return (
-    <main style={{ maxWidth: 1400, margin: "0 auto", padding: 24, fontFamily: "Arial, Helvetica, sans-serif" }}>
+    <main style={{ maxWidth: 1500, margin: "0 auto", padding: 24, fontFamily: "Arial, Helvetica, sans-serif" }}>
       <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 24 }}>
         <h1 style={{ fontSize: 32, marginTop: 0, marginBottom: 8 }}>
           Surplus Solutions Sourcing Opportunity Tool
@@ -115,7 +115,7 @@ export default function HomePage() {
       <section style={{ marginTop: 20 }}>
         <h2 style={{ marginBottom: 6 }}>Results</h2>
         <p style={{ marginTop: 0, color: "#6b7280", fontSize: 14 }}>
-          Output is structured on the original spreadsheet columns, with an added Likely Equipment Types column inferred from science focus and trigger.
+          Output is structured on the original spreadsheet columns, with added Trigger Evidence and Likely Equipment Types columns.
         </p>
 
         {error ? (
@@ -123,7 +123,7 @@ export default function HomePage() {
         ) : null}
 
         <div style={{ overflowX: "auto", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1500 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1650 }}>
             <thead>
               <tr style={{ background: "#f9fafb", textAlign: "left" }}>
                 {[
@@ -136,6 +136,7 @@ export default function HomePage() {
                   "Approx. Size Band (Employees)",
                   "Website",
                   "Likely Trigger",
+                  "Trigger Evidence",
                   "Sourcing Likelihood",
                   "Likely Equipment Types",
                   "Notes",
@@ -150,7 +151,7 @@ export default function HomePage() {
             <tbody>
               {results.length === 0 ? (
                 <tr>
-                  <td colSpan={13} style={{ padding: 18, color: "#6b7280" }}>
+                  <td colSpan={14} style={{ padding: 18, color: "#6b7280" }}>
                     No results returned for this geography.
                   </td>
                 </tr>
@@ -170,6 +171,7 @@ export default function HomePage() {
                       ) : ""}
                     </td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.likelyTrigger}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6", maxWidth: 220 }}>{row.triggerEvidence}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.sourcingLikelihood}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6", maxWidth: 360 }}>{row.likelyEquipmentTypes}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6", maxWidth: 360 }}>{row.notes}</td>
