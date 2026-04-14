@@ -47,7 +47,7 @@ export default function HomePage() {
   }
 
   return (
-    <main style={{ maxWidth: 1500, margin: "0 auto", padding: 24, fontFamily: "Arial, Helvetica, sans-serif" }}>
+    <main style={{ maxWidth: 1750, margin: "0 auto", padding: 24, fontFamily: "Arial, Helvetica, sans-serif" }}>
       <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 24 }}>
         <h1 style={{ fontSize: 32, marginTop: 0, marginBottom: 8 }}>
           Surplus Solutions Sourcing Opportunity Tool
@@ -115,7 +115,7 @@ export default function HomePage() {
       <section style={{ marginTop: 20 }}>
         <h2 style={{ marginBottom: 6 }}>Results</h2>
         <p style={{ marginTop: 0, color: "#6b7280", fontSize: 14 }}>
-          Output is structured on the original spreadsheet columns, with added Trigger Evidence and Likely Equipment Types columns.
+          Output is structured on the original spreadsheet columns, with separate Company Name, Website, and Headline fields.
         </p>
 
         {error ? (
@@ -123,18 +123,19 @@ export default function HomePage() {
         ) : null}
 
         <div style={{ overflowX: "auto", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1650 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1900 }}>
             <thead>
               <tr style={{ background: "#f9fafb", textAlign: "left" }}>
                 {[
                   "Company Name",
+                  "Website",
+                  "Headline",
                   "HQ City",
                   "HQ State",
                   "Region",
                   "Country",
                   "Science Focus / Domain",
                   "Approx. Size Band (Employees)",
-                  "Website",
                   "Likely Trigger",
                   "Trigger Evidence",
                   "Sourcing Likelihood",
@@ -151,7 +152,7 @@ export default function HomePage() {
             <tbody>
               {results.length === 0 ? (
                 <tr>
-                  <td colSpan={14} style={{ padding: 18, color: "#6b7280" }}>
+                  <td colSpan={15} style={{ padding: 18, color: "#6b7280" }}>
                     No results returned for this geography.
                   </td>
                 </tr>
@@ -159,17 +160,16 @@ export default function HomePage() {
                 results.map((row) => (
                   <tr key={row.id}>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.companyName}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>
+                      {row.website ? row.website : ""}
+                    </td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6", maxWidth: 360 }}>{row.headline}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.hqCity}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.hqState}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.region}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.country}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.scienceFocus}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.sizeBand}</td>
-                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>
-                      {row.website ? (
-                        <a href={row.website} target="_blank" rel="noreferrer">{row.website}</a>
-                      ) : ""}
-                    </td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.likelyTrigger}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6", maxWidth: 220 }}>{row.triggerEvidence}</td>
                     <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.sourcingLikelihood}</td>
