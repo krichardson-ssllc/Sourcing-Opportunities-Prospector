@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Opportunity } from "@/types/opportunity";
-import { OpportunityCard } from "@/components/opportunity-card";
+import { OpportunityRow } from "@/types/opportunity";
+
+type Counts = {
+  warn: number;
+  clinicalTrials: number;
+};
 
 export default function HomePage() {
   const [geography, setGeography] = useState("");
-  const [radius, setRadius] = useState("100");
-  const [category, setCategory] = useState("all");
-  const [results, setResults] = useState<Opportunity[]>([]);
+  const [results, setResults] = useState<OpportunityRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sourceCounts, setSourceCounts] = useState<Counts | null>(null);
+  const [triggerCounts, setTriggerCounts] = useState<Record<string, number> | null>(null);
 
   async function handleSearch() {
     setLoading(true);
@@ -20,7 +24,7 @@ export default function HomePage() {
       const response = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ geography, radius, category })
+        body: JSON.stringify({ geography }),
       });
 
       const payload = await response.json();
@@ -30,86 +34,157 @@ export default function HomePage() {
       }
 
       setResults(payload.results ?? []);
+      setSourceCounts(payload.sourceCounts ?? null);
+      setTriggerCounts(payload.triggerCounts ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error.");
       setResults([]);
+      setSourceCounts(null);
+      setTriggerCounts(null);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="container">
-      <div className="grid grid-2">
-        <section className="card card-pad">
-          <h1 className="title">Surplus Solutions Sourcing Opportunity Tool</h1>
-          <p className="subtitle muted">
-            Enter a city, state, metro, country, or region to surface live opportunity signals from public biotech and pharma sources.
-          </p>
+    <main style={{ maxWidth: 1240, margin: "0 auto", padding: 24, fontFamily: "Arial, Helvetica, sans-serif" }}>
+      <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 24 }}>
+        <h1 style={{ fontSize: 32, marginTop: 0, marginBottom: 8 }}>
+          Surplus Solutions Sourcing Opportunity Tool
+        </h1>
+        <p style={{ color: "#6b7280", marginTop: 0 }}>
+          Enter a geography and return interpreted sourcing triggers like facility closures, research shifts, program discontinuations, and WARN-linked site changes.
+        </p>
 
-          <div className="grid" style={{ gridTemplateColumns: "1.5fr 0.7fr 0.8fr auto" }}>
-            <input
-              className="input"
-              value={geography}
-              onChange={(e) => setGeography(e.target.value)}
-              placeholder="Boston, MA · Maryland · France · EMEA"
-            />
-            <select className="select" value={radius} onChange={(e) => setRadius(e.target.value)}>
-              <option value="25">25 miles</option>
-              <option value="50">50 miles</option>
-              <option value="100">100 miles</option>
-              <option value="250">250 miles</option>
-              <option value="region">Region-wide</option>
-            </select>
-            <select className="select" value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="all">All categories</option>
-              <option value="biotech">Biotech</option>
-              <option value="pharma">Pharma</option>
-              <option value="cdmo">CDMO</option>
-              <option value="academic">Academic</option>
-              <option value="medical">Medical</option>
-            </select>
-            <button className="button" onClick={handleSearch} disabled={!geography.trim() || loading}>
-              {loading ? "Searching..." : "Search"}
-            </button>
-          </div>
-
-          <div className="row wrap top-space small muted">
-            <span className="pill">SEC EDGAR</span>
-            <span className="pill">ClinicalTrials.gov</span>
-            <span className="pill">openFDA</span>
-            <span className="pill">WARN</span>
-          </div>
-        </section>
-
-        <aside className="card card-pad">
-          <h2 style={{ marginTop: 0 }}>What this version does</h2>
-          <ul className="muted" style={{ lineHeight: 1.8, paddingLeft: 18 }}>
-            <li>Accepts geography input from reps</li>
-            <li>Calls a live server-side search route</li>
-            <li>Returns structured opportunity records</li>
-            <li>Combines biotech and pharma-relevant public sources</li>
-            <li>Can be extended to Excel and CRM export</li>
-          </ul>
-        </aside>
-      </div>
-
-      <section className="top-space">
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <div>
-            <h2 className="section-title">Results</h2>
-            <p className="muted small">Results below should come from live public-source signals, not placeholder data.</p>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12 }}>
+          <input
+            value={geography}
+            onChange={(e) => setGeography(e.target.value)}
+            placeholder="Massachusetts, California, Boston, San Diego"
+            style={{ padding: 12, border: "1px solid #d1d5db", borderRadius: 10, fontSize: 16 }}
+          />
+          <button
+            onClick={handleSearch}
+            disabled={!geography.trim() || loading}
+            style={{
+              padding: "12px 18px",
+              border: 0,
+              borderRadius: 10,
+              background: loading ? "#9ca3af" : "#111827",
+              color: "#fff",
+              fontSize: 16,
+              cursor: loading ? "default" : "pointer",
+            }}
+          >
+            {loading ? "Searching..." : "Search"}
+          </button>
         </div>
 
-        {error ? <p style={{ color: "#991b1b" }}>{error}</p> : null}
+        <div style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>
+          Sources currently wired: Massachusetts WARN, California WARN, ClinicalTrials.gov
+        </div>
+      </section>
 
-        <div className="results top-space">
-          {results.length === 0 ? (
-            <div className="card card-pad muted">No results yet. Run a search to retrieve live sourcing signals.</div>
-          ) : (
-            results.map((item) => <OpportunityCard key={item.id} item={item} />)
-          )}
+      {(sourceCounts || triggerCounts) && (
+        <section style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 16 }}>
+            <h2 style={{ marginTop: 0, fontSize: 18 }}>Source counts</h2>
+            <div style={{ color: "#374151", lineHeight: 1.8 }}>
+              WARN: {sourceCounts?.warn ?? 0}<br />
+              ClinicalTrials.gov: {sourceCounts?.clinicalTrials ?? 0}
+            </div>
+          </div>
+
+          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 16 }}>
+            <h2 style={{ marginTop: 0, fontSize: 18 }}>Trigger counts</h2>
+            <div style={{ color: "#374151", lineHeight: 1.8 }}>
+              {triggerCounts && Object.keys(triggerCounts).length > 0 ? (
+                Object.entries(triggerCounts).map(([key, value]) => (
+                  <div key={key}>
+                    {key}: {value}
+                  </div>
+                ))
+              ) : (
+                <div>No trigger counts yet.</div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section style={{ marginTop: 20 }}>
+        <h2 style={{ marginBottom: 6 }}>Results</h2>
+        <p style={{ marginTop: 0, color: "#6b7280", fontSize: 14 }}>
+          Output is structured to match the original spreadsheet logic: likely trigger, sourcing likelihood, notes, and source citations.
+        </p>
+
+        {error ? (
+          <div style={{ color: "#991b1b", marginBottom: 12 }}>{error}</div>
+        ) : null}
+
+        <div style={{ overflowX: "auto", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1200 }}>
+            <thead>
+              <tr style={{ background: "#f9fafb", textAlign: "left" }}>
+                {[
+                  "Company Name",
+                  "HQ City",
+                  "HQ State",
+                  "Region",
+                  "Country",
+                  "Science Focus / Domain",
+                  "Approx. Size Band (Employees)",
+                  "Website",
+                  "Likely Trigger",
+                  "Sourcing Likelihood",
+                  "Notes",
+                  "Information Source Citations",
+                ].map((header) => (
+                  <th key={header} style={{ padding: 12, borderBottom: "1px solid #e5e7eb", fontSize: 13 }}>
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {results.length === 0 ? (
+                <tr>
+                  <td colSpan={12} style={{ padding: 18, color: "#6b7280" }}>
+                    No results returned for this geography.
+                  </td>
+                </tr>
+              ) : (
+                results.map((row) => (
+                  <tr key={row.id}>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.companyName}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.hqCity}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.hqState}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.region}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.country}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.scienceFocus}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.sizeBand}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>
+                      {row.website ? (
+                        <a href={row.website} target="_blank" rel="noreferrer">{row.website}</a>
+                      ) : ""}
+                    </td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.likelyTrigger}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6" }}>{row.sourcingLikelihood}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6", maxWidth: 360 }}>{row.notes}</td>
+                    <td style={{ padding: 12, borderTop: "1px solid #f3f4f6", maxWidth: 420 }}>
+                      {row.sourceUrl ? (
+                        <a href={row.sourceUrl} target="_blank" rel="noreferrer">
+                          {row.informationSourceCitations}
+                        </a>
+                      ) : (
+                        row.informationSourceCitations
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
     </main>

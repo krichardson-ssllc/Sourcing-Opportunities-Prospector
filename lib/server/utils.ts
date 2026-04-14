@@ -1,11 +1,13 @@
-import { Opportunity, SourcingLikelihood } from "@/types/opportunity";
-
 export function cleanText(value: unknown): string {
   return String(value ?? "").replace(/\s+/g, " ").trim();
 }
 
+export function normalizeText(value: unknown): string {
+  return cleanText(value).toLowerCase();
+}
+
 export function inferCountry(geography: string): string {
-  const g = geography.toLowerCase();
+  const g = normalizeText(geography);
   if (g.includes("france")) return "France";
   if (g.includes("germany")) return "Germany";
   if (g.includes("belgium")) return "Belgium";
@@ -13,49 +15,18 @@ export function inferCountry(geography: string): string {
   return "US";
 }
 
-export function likelihoodFromText(text: string): SourcingLikelihood {
-  const t = text.toLowerCase();
-
-  if (
-    t.includes("layoff") ||
-    t.includes("mass layoff") ||
-    t.includes("plant closing") ||
-    t.includes("facility closure") ||
-    t.includes("shutdown") ||
-    t.includes("bankruptcy") ||
-    t.includes("liquidation") ||
-    t.includes("terminated")
-  ) {
-    return "High";
-  }
-
-  if (
-    t.includes("restructuring") ||
-    t.includes("cost reduction") ||
-    t.includes("consolidation") ||
-    t.includes("withdrawn") ||
-    t.includes("suspended") ||
-    t.includes("recall") ||
-    t.includes("discontinued")
-  ) {
-    return "Medium";
-  }
-
-  return "Low";
-}
-
-export function sortAndDedupe(results: Opportunity[]): Opportunity[] {
+export function dedupeBy<T>(items: T[], getKey: (item: T) => string): T[] {
   const seen = new Set<string>();
-  const weight = { High: 3, Medium: 2, Low: 1 };
-
-  const filtered = results.filter((r) => {
-    const key = `${r.companyName}|${r.sourceTitle}|${r.sourceUrl}`;
+  return items.filter((item) => {
+    const key = getKey(item);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
 
-  return filtered.sort(
-    (a, b) => weight[b.sourcingLikelihood] - weight[a.sourcingLikelihood]
-  );
+export function scoreWeight(value: "High" | "Medium" | "Low"): number {
+  if (value === "High") return 3;
+  if (value === "Medium") return 2;
+  return 1;
 }

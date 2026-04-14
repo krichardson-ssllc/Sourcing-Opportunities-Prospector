@@ -1,29 +1,20 @@
-export type SourcingLikelihood = "High" | "Medium" | "Low";
+export type OpportunityLikelihood = "High" | "Medium" | "Low";
 
-export interface Opportunity {
+export type OpportunityRow = {
   id: string;
   companyName: string;
+  hqCity: string;
+  hqState: string;
   region: string;
   country: string;
   scienceFocus: string;
-  opportunityType: string;
-  sourcingLikelihood: SourcingLikelihood;
-  trigger: string;
+  sizeBand: string;
+  website: string;
+  likelyTrigger: string;
+  sourcingLikelihood: OpportunityLikelihood;
+  notes: string;
+  informationSourceCitations: string;
   sourceType: string;
   sourceUrl: string;
-  sourceTitle: string;
-  summary: string;
-  sourceDate: string;
-}
-
-export interface SearchRequest {
-  geography: string;
-  radius: string;
-  category: string;
-}
-
-export interface SearchResponse {
-  normalizedGeography: string;
-  resultCount: number;
-  opportunities: Opportunity[];
-}
+  sourceDate?: string;
+};

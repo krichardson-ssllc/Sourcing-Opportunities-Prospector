@@ -1,63 +1,65 @@
-import { Opportunity } from "@/types/opportunity";
-import { inferCountry, likelihoodFromText, cleanText } from "../utils";
+import { cleanText, inferCountry } from "../utils";
+import { RawSignal } from "../trigger-taxonomy";
 
-export async function searchClinicalTrialsByGeography(
-  geography: string
-): Promise<Opportunity[]> {
+export async function searchClinicalTrialSignals(geography: string): Promise<RawSignal[]> {
   const statuses = ["TERMINATED", "WITHDRAWN", "SUSPENDED"];
-  const out: Opportunity[] = [];
+  const out: RawSignal[] = [];
 
-  await Promise.all(
-    statuses.map(async (status) => {
-      const url =
-        `https://clinicaltrials.gov/api/v2/studies` +
-        `?query.term=${encodeURIComponent(geography)}` +
-        `&filter.overallStatus=${encodeURIComponent(status)}` +
-        `&pageSize=25` +
-        `&format=json`;
+  for (const status of statuses) {
+    const url =
+      `https://clinicaltrials.gov/api/v2/studies` +
+      `?query.term=${encodeURIComponent(geography)}` +
+      `&filter.overallStatus=${encodeURIComponent(status)}` +
+      `&pageSize=20` +
+      `&format=json`;
 
+    try {
       const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) return;
+      if (!res.ok) continue;
 
       const json = await res.json();
       const studies = Array.isArray(json?.studies) ? json.studies : [];
 
       for (const study of studies) {
         const protocol = study.protocolSection || {};
-        const idMod = protocol.identificationModule || {};
-        const statusMod = protocol.statusModule || {};
-        const sponsorMod = protocol.sponsorCollaboratorsModule || {};
-        const condMod = protocol.conditionsModule || {};
+        const identificationModule = protocol.identificationModule || {};
+        const statusModule = protocol.statusModule || {};
+        const sponsorModule = protocol.sponsorCollaboratorsModule || {};
+        const conditionsModule = protocol.conditionsModule || {};
+        const contactsLocationsModule = protocol.contactsLocationsModule || {};
 
-        const title = cleanText(idMod.briefTitle || idMod.officialTitle);
-        const nctId = cleanText(idMod.nctId);
-        const sponsor = cleanText(
-          sponsorMod.leadSponsor?.name || "Unknown sponsor"
-        );
-        const overallStatus = cleanText(statusMod.overallStatus);
-        const whyStopped = cleanText(statusMod.whyStopped);
-        const conditions = Array.isArray(condMod.conditions)
-          ? condMod.conditions.join(", ")
+        const companyName = cleanText(sponsorModule.leadSponsor?.name || "Unknown sponsor");
+        const title = cleanText(identificationModule.briefTitle || identificationModule.officialTitle);
+        const nctId = cleanText(identificationModule.nctId);
+        const whyStopped = cleanText(statusModule.whyStopped);
+        const overallStatus = cleanText(statusModule.overallStatus);
+        const city = cleanText(contactsLocationsModule?.locations?.[0]?.city);
+        const state = cleanText(contactsLocationsModule?.locations?.[0]?.state);
+        const conditions = Array.isArray(conditionsModule.conditions)
+          ? conditionsModule.conditions.join(", ")
           : "";
 
         out.push({
-          id: crypto.randomUUID(),
-          companyName: sponsor,
+          companyName,
           region: geography,
           country: inferCountry(geography),
           scienceFocus: conditions || "Clinical development",
-          opportunityType: "Clinical program disruption",
-          sourcingLikelihood: likelihoodFromText(`${overallStatus} ${whyStopped}`),
-          trigger: `${overallStatus}${whyStopped ? ` - ${whyStopped}` : ""}`,
+          website: "",
+          sizeBand: "",
           sourceType: "ClinicalTrials.gov",
-          sourceTitle: title || nctId,
           sourceUrl: nctId ? `https://clinicaltrials.gov/study/${nctId}` : "https://clinicaltrials.gov/",
-          sourceDate: cleanText(statusMod.lastUpdatePostDateStruct?.date),
-          summary: whyStopped || `Study status: ${overallStatus}`,
+          sourceTitle: title || nctId || "Clinical trial status change",
+          sourceDate: cleanText(statusModule.lastUpdatePostDateStruct?.date),
+          rawText: `${overallStatus}${whyStopped ? ` | ${whyStopped}` : ""}`,
+          rawSummary: whyStopped || `Study status: ${overallStatus}`,
+          hqCity: city,
+          hqState: state,
         });
       }
-    })
-  );
+    } catch {
+      // ignore feed failure
+    }
+  }
 
   return out;
 }

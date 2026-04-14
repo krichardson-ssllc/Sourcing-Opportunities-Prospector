@@ -1,0 +1,4 @@
+Add these in Vercel > Project > Settings > Environment Variables
+
+WARN_MA_FEED=https://www.mass.gov/files/csv/2026-03/WARN%20Report%20FY%202026%20for%20Week%20Ending%2003-20-2026.csv
+WARN_CA_FEED=https://edd.ca.gov/siteassets/files/jobs_and_training/warn/warn_report1.xlsx
