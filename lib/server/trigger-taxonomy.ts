@@ -3,10 +3,11 @@ import { cleanText, normalizeText } from "./utils";
 
 export type RawSignal = {
   companyName: string;
+  website?: string;
+  headline?: string;
   region: string;
   country: string;
   scienceFocus?: string;
-  website?: string;
   sourceType: string;
   sourceUrl: string;
   sourceTitle: string;
@@ -16,6 +17,7 @@ export type RawSignal = {
   hqCity?: string;
   hqState?: string;
   sizeBand?: string;
+};
 };
 
 type ClassifiedSignal = {
