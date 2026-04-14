@@ -16,14 +16,15 @@ function toOpportunityRow(signal: RawSignal): OpportunityRow {
 
   return {
     id: crypto.randomUUID(),
-    companyName: signal.companyName || "Unknown company",
+    companyName: signal.companyName || "",
+    website: signal.website || "",
+    headline: signal.headline || signal.sourceTitle || "",
     hqCity: signal.hqCity || "",
     hqState: signal.hqState || "",
     region: signal.region,
     country: signal.country,
     scienceFocus: signal.scienceFocus || "",
     sizeBand: signal.sizeBand || "",
-    website: signal.website || "",
     likelyTrigger: classified.likelyTrigger,
     triggerEvidence: classified.triggerEvidence,
     sourcingLikelihood: classified.sourcingLikelihood,
@@ -51,6 +52,7 @@ function geographyMatchesRow(row: OpportunityRow, geography: string): boolean {
       row.hqState,
       row.country,
       row.companyName,
+      row.headline,
       row.informationSourceCitations,
     ]
       .filter(Boolean)
@@ -69,6 +71,7 @@ function geographyMatchesRow(row: OpportunityRow, geography: string): boolean {
     "united kingdom",
     "united states",
     "us",
+    "colorado",
   ]);
 
   if (broadGeos.has(geo)) {
@@ -77,6 +80,23 @@ function geographyMatchesRow(row: OpportunityRow, geography: string): boolean {
 
   const escaped = geo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`\\b${escaped}\\b`, "i").test(haystack);
+}
+
+function isUsableCompanyName(name: string): boolean {
+  const badPatterns = [
+    /^top biotech/i,
+    /^biotech companies/i,
+    /^pharma companies/i,
+    /^industry roundup/i,
+    /^companies to watch/i,
+    /^seven biotech companies/i,
+    /^startups to watch/i,
+    /^best biotech/i,
+    /^growing companies/i,
+  ];
+
+  if (!name.trim()) return false;
+  return !badPatterns.some((pattern) => pattern.test(name));
 }
 
 export async function POST(req: NextRequest) {
@@ -98,19 +118,7 @@ export async function POST(req: NextRequest) {
     const rows = allSignals
       .map(toOpportunityRow)
       .filter((row) => geographyMatchesRow(row, geography))
-      .filter((row) => {
-        const badCompanyPatterns = [
-          /^top biotech/i,
-          /^biotech companies/i,
-          /^pharma companies/i,
-          /^industry roundup/i,
-          /^companies to watch/i,
-          /^seven biotech companies/i,
-          /^startups to watch/i,
-        ];
-
-        return !badCompanyPatterns.some((pattern) => pattern.test(row.companyName));
-      })
+      .filter((row) => isUsableCompanyName(row.companyName))
       .sort((a, b) => {
         const byScore =
           scoreWeight(b.sourcingLikelihood) - scoreWeight(a.sourcingLikelihood);
