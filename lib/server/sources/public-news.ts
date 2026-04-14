@@ -93,18 +93,35 @@ function geographyMatches(title: string, description: string, geography: string)
 }
 
 function extractCompanyName(title: string, description: string): string {
-  const combined = `${title} ${description}`;
+  const text = `${title} ${description}`;
 
-  const companyPatterns = [
-    /^([A-Z][A-Za-z0-9&.\-,' ]{1,80}?)\s+(announces|reports|closes|shuts|cuts|lays off|restructures|explores|faces|files)\b/,
-    /^([A-Z][A-Za-z0-9&.\-,' ]{1,80}?)\s*:\s*/,
-    /^([A-Z][A-Za-z0-9&.\-,' ]{1,80}?)\s*[-–|]\s*/,
+  const patterns = [
+    /\b([A-Z][A-Za-z0-9&.,'’()\- ]{2,80}?)\s+(announces|reports|cuts|lays off|restructures|closes|shuts down|explores|faces|files)\b/i,
+    /\b([A-Z][A-Za-z0-9&.,'’()\- ]{2,80}?)\s+(to lay off|to close|to shut down|to restructure)\b/i,
+    /^([A-Z][A-Za-z0-9&.,'’()\- ]{2,80}?)\s*:\s+/,
+    /^([A-Z][A-Za-z0-9&.,'’()\- ]{2,80}?)\s+[–-]\s+/,
   ];
 
-  for (const pattern of companyPatterns) {
-    const match = combined.match(pattern);
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
     if (match?.[1]) {
-      return cleanText(match[1]);
+      const candidate = cleanText(match[1]);
+
+      const badStarts = [
+        /^top biotech/i,
+        /^biotech companies/i,
+        /^pharma companies/i,
+        /^industry roundup/i,
+        /^companies to watch/i,
+        /^seven biotech companies/i,
+        /^startups to watch/i,
+        /^best biotech/i,
+        /^growing companies/i,
+      ];
+
+      if (!badStarts.some((bad) => bad.test(candidate))) {
+        return candidate;
+      }
     }
   }
 
@@ -150,7 +167,6 @@ export async function searchPublicNewsSignals(geography: string): Promise<RawSig
         if (!looksActionable(title, description)) continue;
 
         const companyName = extractCompanyName(title, description);
-        if (!companyName) continue;
 
         out.push({
           companyName,
