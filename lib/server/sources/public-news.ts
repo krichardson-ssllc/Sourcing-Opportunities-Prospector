@@ -20,7 +20,9 @@ const SIGNAL_QUERIES = [
   "site shutdown pharma",
   "cost reduction biotech",
   "bankruptcy biotech",
-  "liquidation biotech"
+  "liquidation biotech",
+  "headcount reduction biotech",
+  "site exit biotech"
 ];
 
 const POSITIVE_PATTERNS = [
@@ -44,7 +46,9 @@ const POSITIVE_PATTERNS = [
   /headcount reduction/i,
   /wind-down/i,
   /site exit/i,
-  /manufacturing transfer/i
+  /manufacturing transfer/i,
+  /downsizing/i,
+  /cuts jobs/i
 ];
 
 const NEGATIVE_PATTERNS = [
@@ -157,7 +161,7 @@ export async function searchPublicNewsSignals(geography: string): Promise<RawSig
           : [parsed.rss.channel.item]
         : [];
 
-      for (const item of items.slice(0, 8)) {
+      for (const item of items.slice(0, 12)) {
         const title = cleanText(item.title);
         const link = cleanText(item.link);
         const pubDate = cleanText(item.pubDate);
