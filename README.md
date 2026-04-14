@@ -10,7 +10,7 @@ A starter Next.js app for a sales-facing geographic opportunity finder.
 - Supabase schema for production use
 - TypeScript types and scoring scaffold
 
-## What still needs to be built
+## What still need to be built
 - Authentication
 - Live public-source ingestion
 - Deduplication and scoring pipeline
