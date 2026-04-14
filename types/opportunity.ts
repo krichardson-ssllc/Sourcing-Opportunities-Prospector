@@ -11,6 +11,7 @@ export type OpportunityRow = {
   sizeBand: string;
   website: string;
   likelyTrigger: string;
+  triggerEvidence: string;
   sourcingLikelihood: OpportunityLikelihood;
   likelyEquipmentTypes: string;
   notes: string;
