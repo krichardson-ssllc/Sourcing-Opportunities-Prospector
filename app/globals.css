@@ -1,0 +1,45 @@
+:root {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #475569;
+  --border: #e2e8f0;
+  --accent: #111827;
+  --pill: #f1f5f9;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--text); }
+a { color: inherit; text-decoration: none; }
+button, input, select { font: inherit; }
+.container { max-width: 1160px; margin: 0 auto; padding: 24px; }
+.grid { display: grid; gap: 16px; }
+.grid-2 { grid-template-columns: 2fr 1fr; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.card-pad { padding: 20px; }
+.muted { color: var(--muted); }
+.row { display: flex; gap: 12px; align-items: center; }
+.wrap { flex-wrap: wrap; }
+.input, .select, .button {
+  height: 44px; border-radius: 12px; border: 1px solid var(--border); padding: 0 14px; background: white;
+}
+.input, .select { width: 100%; }
+.button { background: var(--accent); color: white; cursor: pointer; }
+.button.secondary { background: white; color: var(--text); }
+.pill { display: inline-flex; align-items: center; gap: 6px; background: var(--pill); border-radius: 999px; padding: 8px 12px; font-size: 13px; }
+.badge { display: inline-block; border-radius: 999px; padding: 6px 10px; font-size: 12px; border: 1px solid var(--border); }
+.badge.high { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+.badge.medium { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.badge.low { background: #e2e8f0; color: #334155; border-color: #cbd5e1; }
+.results { display: grid; gap: 16px; }
+.result-grid { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+.small { font-size: 13px; }
+.title { font-size: 38px; line-height: 1.1; margin: 0; }
+.subtitle { font-size: 16px; line-height: 1.6; }
+.top-space { margin-top: 20px; }
+.section-title { font-size: 28px; margin: 0; }
+.stat { background: #f8fafc; border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .result-grid { grid-template-columns: 1fr; }
+}
