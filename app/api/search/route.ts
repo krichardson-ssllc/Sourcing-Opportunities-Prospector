@@ -25,8 +25,12 @@ function toOpportunityRow(signal: RawSignal): OpportunityRow {
     sizeBand: signal.sizeBand || "",
     website: signal.website || "",
     likelyTrigger: classified.likelyTrigger,
+    triggerEvidence: classified.triggerEvidence,
     sourcingLikelihood: classified.sourcingLikelihood,
-    likelyEquipmentTypes: inferEquipmentTypes(signal.scienceFocus || "", classified.likelyTrigger),
+    likelyEquipmentTypes: inferEquipmentTypes(
+      signal.scienceFocus || "",
+      classified.likelyTrigger
+    ),
     notes: classified.notes,
     informationSourceCitations: buildCitation(signal),
     sourceType: signal.sourceType,
@@ -94,6 +98,19 @@ export async function POST(req: NextRequest) {
     const rows = allSignals
       .map(toOpportunityRow)
       .filter((row) => geographyMatchesRow(row, geography))
+      .filter((row) => {
+        const badCompanyPatterns = [
+          /^top biotech/i,
+          /^biotech companies/i,
+          /^pharma companies/i,
+          /^industry roundup/i,
+          /^companies to watch/i,
+          /^seven biotech companies/i,
+          /^startups to watch/i,
+        ];
+
+        return !badCompanyPatterns.some((pattern) => pattern.test(row.companyName));
+      })
       .sort((a, b) => {
         const byScore =
           scoreWeight(b.sourcingLikelihood) - scoreWeight(a.sourcingLikelihood);
