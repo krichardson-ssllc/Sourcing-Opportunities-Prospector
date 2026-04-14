@@ -25,7 +25,7 @@ const SIGNAL_QUERIES = [
   "site exit biotech"
 ];
 
-const POSITIVE_PATTERNS = [
+const ACTIONABLE_PATTERNS = [
   /layoff/i,
   /facility closure/i,
   /site closure/i,
@@ -48,10 +48,66 @@ const POSITIVE_PATTERNS = [
   /site exit/i,
   /manufacturing transfer/i,
   /downsizing/i,
-  /cuts jobs/i
+  /cuts jobs/i,
+  /workforce reduction/i
 ];
 
-const NEGATIVE_PATTERNS = [
+const BIOTECH_PATTERNS = [
+  /biotech/i,
+  /biopharma/i,
+  /pharma/i,
+  /pharmaceutical/i,
+  /therapeutics/i,
+  /biosciences/i,
+  /life sciences/i,
+  /laboratory/i,
+  /\blab\b/i,
+  /drug development/i,
+  /clinical-stage/i,
+  /clinical stage/i,
+  /research facility/i,
+  /r&d/i,
+  /genomics/i,
+  /cell therapy/i,
+  /gene therapy/i,
+  /biologics/i,
+  /cdmo/i,
+  /diagnostics/i,
+  /molecular/i,
+  /analytical/i,
+  /manufacturing site/i,
+  /vaccine/i
+];
+
+const EXCLUSION_PATTERNS = [
+  /airport/i,
+  /\bfaa\b/i,
+  /airline/i,
+  /hotel/i,
+  /restaurant/i,
+  /retail/i,
+  /shopping/i,
+  /real estate/i,
+  /housing/i,
+  /school/i,
+  /university sports/i,
+  /\bnfl\b/i,
+  /\bnba\b/i,
+  /\bmlb\b/i,
+  /police/i,
+  /fire department/i,
+  /construction/i,
+  /automotive/i,
+  /oil and gas/i,
+  /casino/i,
+  /tourism/i,
+  /music festival/i,
+  /airport workers/i,
+  /flight/i,
+  /runway expansion/i
+];
+
+const BAD_HEADLINE_PATTERNS = [
   /companies climbing/i,
   /companies to watch/i,
   /top biotech/i,
@@ -80,20 +136,27 @@ function extractPublisher(title: string): string {
   return "Public news / press release";
 }
 
-function looksActionable(title: string, description: string): boolean {
-  const combined = `${title} ${description}`;
-
-  if (NEGATIVE_PATTERNS.some((pattern) => pattern.test(combined))) {
-    return false;
-  }
-
-  return POSITIVE_PATTERNS.some((pattern) => pattern.test(combined));
-}
-
 function geographyMatches(title: string, description: string, geography: string): boolean {
   const needle = normalizeText(geography);
   const haystack = normalizeText(`${title} ${description}`);
   return needle ? haystack.includes(needle) : true;
+}
+
+function isBiotechOrPharmaRelevant(title: string, description: string): boolean {
+  const combined = `${title} ${description}`;
+
+  if (EXCLUSION_PATTERNS.some((pattern) => pattern.test(combined))) {
+    return false;
+  }
+
+  if (BAD_HEADLINE_PATTERNS.some((pattern) => pattern.test(combined))) {
+    return false;
+  }
+
+  const hasActionableSignal = ACTIONABLE_PATTERNS.some((pattern) => pattern.test(combined));
+  const hasBiotechSignal = BIOTECH_PATTERNS.some((pattern) => pattern.test(combined));
+
+  return hasActionableSignal && hasBiotechSignal;
 }
 
 function extractCompanyName(title: string, description: string): string {
@@ -111,19 +174,10 @@ function extractCompanyName(title: string, description: string): string {
     if (match?.[1]) {
       const candidate = cleanText(match[1]);
 
-      const badStarts = [
-        /^top biotech/i,
-        /^biotech companies/i,
-        /^pharma companies/i,
-        /^industry roundup/i,
-        /^companies to watch/i,
-        /^seven biotech companies/i,
-        /^startups to watch/i,
-        /^best biotech/i,
-        /^growing companies/i,
-      ];
-
-      if (!badStarts.some((bad) => bad.test(candidate))) {
+      if (
+        !BAD_HEADLINE_PATTERNS.some((bad) => bad.test(candidate)) &&
+        !EXCLUSION_PATTERNS.some((bad) => bad.test(candidate))
+      ) {
         return candidate;
       }
     }
@@ -168,7 +222,7 @@ export async function searchPublicNewsSignals(geography: string): Promise<RawSig
         const description = extractDescriptionText(item.description);
 
         if (!geographyMatches(title, description, geography)) continue;
-        if (!looksActionable(title, description)) continue;
+        if (!isBiotechOrPharmaRelevant(title, description)) continue;
 
         const companyName = extractCompanyName(title, description);
 
