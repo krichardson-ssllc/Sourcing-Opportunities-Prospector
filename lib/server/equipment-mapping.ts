@@ -1,120 +1,154 @@
 import { normalizeText } from "./utils";
 
-export function inferEquipmentTypes(scienceFocus: string, trigger: string): string {
-  const sf = normalizeText(scienceFocus);
-  const tr = normalizeText(trigger);
+function addAll(set: Set<string>, items: string[]) {
+  items.forEach((item) => set.add(item));
+}
+
+export function inferEquipmentTypes(
+  scienceFocus: string,
+  trigger: string,
+  headline: string = "",
+  notes: string = "",
+  sourceText: string = ""
+): string {
+  const text = normalizeText(
+    [scienceFocus, trigger, headline, notes, sourceText].filter(Boolean).join(" ")
+  );
+
   const types = new Set<string>();
 
-  if (sf.includes("cell therapy") || sf.includes("immunotherapy") || sf.includes("gene therapy")) {
-    [
+  // Flow / cell analysis
+  if (
+    /flow cytometry|cell sorter|cell analysis|facs|cytometer|immunotherapy|cell therapy|car-t|tcr|gene therapy|cgmp cell/i.test(
+      text
+    )
+  ) {
+    addAll(types, [
       "flow cytometers",
       "cell sorters",
       "biosafety cabinets",
       "CO2 incubators",
       "centrifuges",
-      "bioreactors",
       "freezers",
-      "microscopes / imaging",
-      "liquid handlers",
-    ].forEach((x) => types.add(x));
+    ]);
   }
 
-  if (sf.includes("analytical") || sf.includes("qc") || sf.includes("pharma analysis") || sf.includes("mass spec")) {
-    [
+  // Genomics / molecular biology
+  if (
+    /genomics|sequencing|pcr|qpcr|ddpcr|molecular biology|ngs|dna|rna|gene editing/i.test(
+      text
+    )
+  ) {
+    addAll(types, [
+      "PCR / qPCR systems",
+      "sequencers",
+      "automated extraction systems",
+      "liquid handlers",
+      "plate readers",
+      "freezers",
+    ]);
+  }
+
+  // Analytical / QC / chemistry
+  if (
+    /analytical|qc|quality control|mass spectrometry|mass spec|lc\/ms|hplc|uplc|uhplc|chromatography|spectrometry/i.test(
+      text
+    )
+  ) {
+    addAll(types, [
       "HPLC / UHPLC systems",
       "LC/MS systems",
+      "chromatography systems",
       "balances",
       "spectrometers",
-      "plate readers",
       "sample prep systems",
-    ].forEach((x) => types.add(x));
+    ]);
   }
 
-  if (sf.includes("bioprocess") || sf.includes("vaccine") || sf.includes("biologics") || sf.includes("cdmo")) {
-    [
+  // Bioprocess / manufacturing / fill-finish
+  if (
+    /bioprocess|biologics|vaccine|fermentation|upstream|downstream|fill-finish|fill finish|manufacturing|cdmo|process development/i.test(
+      text
+    )
+  ) {
+    addAll(types, [
       "single-use bioreactors",
       "chromatography systems",
       "TFF skids",
-      "lyophilizers",
       "process vessels",
       "freezers",
-    ].forEach((x) => types.add(x));
+      "lyophilizers",
+    ]);
   }
 
-  if (sf.includes("genomics") || sf.includes("molecular")) {
-    [
-      "PCR / qPCR systems",
-      "sequencers",
-      "liquid handlers",
-      "automated extraction systems",
-      "plate readers",
-    ].forEach((x) => types.add(x));
-  }
-
-  if (sf.includes("cell biology") || sf.includes("discovery")) {
-    [
-      "live-cell imagers",
+  // Imaging / cell biology / discovery
+  if (
+    /cell biology|discovery|microscopy|microscope|imaging|live-cell|live cell|high-content|assay/i.test(
+      text
+    )
+  ) {
+    addAll(types, [
       "microscopes",
-      "flow cytometers",
-      "incubators",
-      "liquid handlers",
+      "live-cell imagers",
       "plate readers",
-    ].forEach((x) => types.add(x));
+      "liquid handlers",
+      "incubators",
+    ]);
   }
 
-  if (sf.includes("microbiome")) {
-    [
-      "plate readers",
+  // Microbiology / microbiome
+  if (/microbiology|microbiome|culture|sterility/i.test(text)) {
+    addAll(types, [
       "incubators",
-      "freezers",
+      "plate readers",
       "centrifuges",
       "PCR systems",
-    ].forEach((x) => types.add(x));
+      "freezers",
+    ]);
   }
 
-  if (sf.includes("manufacturing") || sf.includes("fill-finish")) {
-    [
-      "filling lines",
-      "isolators",
-      "lyophilizers",
-      "inspection systems",
-      "packaging equipment",
-    ].forEach((x) => types.add(x));
+  // Automation
+  if (/automation|liquid handling|liquid handler|robotic|screening/i.test(text)) {
+    addAll(types, [
+      "liquid handlers",
+      "automation platforms",
+      "plate readers",
+      "sample prep systems",
+    ]);
   }
 
-  if (tr.includes("facility closure") || tr.includes("site wind-down") || tr.includes("headcount reductions")) {
-    [
+  // Trigger-based additions
+  if (/facility closure|site wind-down|headcount reductions|shutdown|site exit/i.test(text)) {
+    addAll(types, [
       "general lab support equipment",
       "freezers",
       "incubators",
       "centrifuges",
-      "analytical instruments",
-    ].forEach((x) => types.add(x));
+    ]);
   }
 
-  if (tr.includes("research shift") || tr.includes("program discontinuation") || tr.includes("pipeline")) {
-    [
+  if (/pipeline reprioritization|program discontinuation|research shift/i.test(text)) {
+    addAll(types, [
       "specialized R&D instruments",
       "assay systems",
-      "liquid handlers",
       "analytical platforms",
-    ].forEach((x) => types.add(x));
+    ]);
   }
 
-  if (tr.includes("portfolio narrowing") || tr.includes("spend control") || tr.includes("capital")) {
-    [
-      "select analytical systems",
+  if (/portfolio narrowing|spend control|capital discipline|funding pressure/i.test(text)) {
+    addAll(types, [
       "discovery lab equipment",
+      "analytical instruments",
       "automation platforms",
-    ].forEach((x) => types.add(x));
+    ]);
   }
 
   if (types.size === 0) {
-    [
+    addAll(types, [
       "general lab equipment",
       "analytical instruments",
       "support equipment",
-    ].forEach((x) => types.add(x));
+    ]);
   }
 
   return Array.from(types).join("; ");
