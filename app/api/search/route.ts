@@ -9,6 +9,7 @@ import { searchPublicNewsSignals } from "@/lib/server/sources/public-news";
 
 const schema = z.object({
   geography: z.string().min(2),
+  radiusMiles: z.number().optional(),
 });
 
 function toOpportunityRow(signal: RawSignal): OpportunityRow {
@@ -42,7 +43,6 @@ function toOpportunityRow(signal: RawSignal): OpportunityRow {
 
 function geographyMatchesRow(row: OpportunityRow, geography: string): boolean {
   const geo = normalizeText(geography);
-
   if (!geo) return true;
 
   const haystack = normalizeText(
@@ -51,7 +51,6 @@ function geographyMatchesRow(row: OpportunityRow, geography: string): boolean {
       row.hqCity,
       row.hqState,
       row.country,
-      row.companyName,
       row.headline,
       row.informationSourceCitations,
     ]
@@ -82,21 +81,9 @@ function geographyMatchesRow(row: OpportunityRow, geography: string): boolean {
   return new RegExp(`\\b${escaped}\\b`, "i").test(haystack);
 }
 
-function isUsableCompanyName(name: string): boolean {
-  const badPatterns = [
-    /^top biotech/i,
-    /^biotech companies/i,
-    /^pharma companies/i,
-    /^industry roundup/i,
-    /^companies to watch/i,
-    /^seven biotech companies/i,
-    /^startups to watch/i,
-    /^best biotech/i,
-    /^growing companies/i,
-  ];
-
-  if (!name.trim()) return false;
-  return !badPatterns.some((pattern) => pattern.test(name));
+function isBadHeadlineAsCompany(row: OpportunityRow): boolean {
+  if (!row.companyName) return false;
+  return normalizeText(row.companyName) === normalizeText(row.headline);
 }
 
 export async function POST(req: NextRequest) {
@@ -118,7 +105,11 @@ export async function POST(req: NextRequest) {
     const rows = allSignals
       .map(toOpportunityRow)
       .filter((row) => geographyMatchesRow(row, geography))
-      .filter((row) => isUsableCompanyName(row.companyName))
+      .map((row) =>
+        isBadHeadlineAsCompany(row)
+          ? { ...row, companyName: "" }
+          : row
+      )
       .sort((a, b) => {
         const byScore =
           scoreWeight(b.sourcingLikelihood) - scoreWeight(a.sourcingLikelihood);
